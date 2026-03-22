@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ExamController;
 Route::get('/exams', [ExamController::class, 'index']);
 Route::post('/exams', [ExamController::class, 'store']);
+Route::get('/exams/{id}', [ExamController::class, 'show']);
 
 // Questions
 use App\Http\Controllers\QuestionController;

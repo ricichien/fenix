@@ -22,4 +22,10 @@ class DashboardService
             'highest_score' => $highestScore,
         ];
     }
+    public function getRanking(int $examId)
+    {
+        return \App\Models\Attempt::where('exam_id', $examId)
+            ->orderByDesc('score')
+            ->paginate(10);
+    }
 }
