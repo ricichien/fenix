@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Services\ExamService;
 use App\Models\Exam;
+use App\Models\Attempt;
 
 class ExamController extends Controller
 {
@@ -24,19 +25,59 @@ class ExamController extends Controller
 
     public function index()
     {
-        return response()->json($this->examService->getAll());
-    }
-    public function show($id)
-    {
-        $exam = Exam::with('questions.options')->findOrFail($id);
+        $studentId = request()->query('student_id');
 
-        $exam->questions->each(function ($question) {
-            $question->options->each(function ($option) {
-                unset($option->is_correct);
+        $exams = Exam::with('questions.options')->get();
+
+        $attemptedExamIds = [];
+        if ($studentId) {
+            $attemptedExamIds = Attempt::where('student_id', $studentId)
+                ->pluck('exam_id')
+                ->toArray();
+        }
+
+        $payload = $exams->map(function ($exam) use ($attemptedExamIds) {
+            $exam->questions->each(function ($question) {
+                $question->options->makeHidden(['is_correct']);
             });
+
+            $data = $exam->toArray();
+            $data['has_attempt'] = in_array($exam->id, $attemptedExamIds);
+
+            return $data;
         });
 
-        return response()->json($exam);
+        return response()->json($payload);
+    }
+
+    public function show($id)
+    {
+        $studentId = request()->query('student_id');
+
+        $exam = Exam::with('questions.options')->findOrFail($id);
+
+        $attempt = null;
+        if ($studentId) {
+            $attempt = Attempt::with('answers')
+                ->where('exam_id', $id)
+                ->where('student_id', $studentId)
+                ->latest()
+                ->first();
+        }
+
+        $lastResult = $attempt
+            ? $this->buildResultFromAttempt($exam, $attempt)
+            : null;
+
+        $exam->questions->each(function ($question) {
+            $question->options->makeHidden(['is_correct']);
+        });
+
+        $data = $exam->toArray();
+        $data['has_attempt'] = $attempt ? true : false;
+        $data['last_result'] = $lastResult;
+
+        return response()->json($data);
     }
 
     public function showWithAnswers($id)
@@ -58,15 +99,11 @@ class ExamController extends Controller
     {
         $exam = Exam::with('questions.options')->findOrFail($id);
 
-        // Deleta opções
         foreach ($exam->questions as $question) {
             $question->options()->delete();
         }
 
-        // Deleta questões
         $exam->questions()->delete();
-
-        // Deleta prova
         $exam->delete();
 
         return response()->json([
@@ -89,5 +126,55 @@ class ExamController extends Controller
         $exam = $this->examService->update($id, $validated);
 
         return response()->json($exam);
+    }
+
+    private function buildResultFromAttempt(Exam $exam, Attempt $attempt): array
+    {
+        $attemptAnswers = $attempt->answers->keyBy('question_id');
+
+        $score = 0;
+        $details = [];
+
+        foreach ($exam->questions as $question) {
+            $answer = $attemptAnswers->get($question->id);
+
+            $selectedOption = null;
+            if ($answer) {
+                $selectedOption = $question->options->firstWhere('id', $answer->selected_option_id);
+            }
+
+            $correctOption = $question->options->firstWhere('is_correct', true);
+
+            $isCorrect = $correctOption && $selectedOption && $correctOption->id === $selectedOption->id;
+
+            if ($isCorrect) {
+                $score++;
+            }
+
+            $details[] = [
+                'question_id' => $question->id,
+                'question_statement' => $question->statement,
+                'selected_option_id' => $selectedOption?->id,
+                'selected_text' => $selectedOption?->text,
+                'correct_option_id' => $correctOption?->id,
+                'correct_text' => $correctOption?->text,
+                'is_correct' => $isCorrect,
+            ];
+        }
+
+        $totalQuestions = $exam->questions->count();
+        $percentage = $totalQuestions > 0 ? round(($score / $totalQuestions) * 100) : 0;
+
+        return [
+            'attempt_id' => $attempt->id,
+            'exam_id' => $attempt->exam_id,
+            'student_id' => $attempt->student_id,
+            'score' => $score,
+            'percentage' => $percentage,
+            'total_questions' => $totalQuestions,
+            'correct_count' => $score,
+            'wrong_count' => $totalQuestions - $score,
+            'details' => $details,
+        ];
     }
 }

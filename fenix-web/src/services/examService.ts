@@ -2,12 +2,26 @@ import api from './api'
 import { getCurrentUser } from '@/stores/user'
 
 export const getExams = async () => {
-  const { data } = await api.get('/exams')
+  const user = getCurrentUser()
+
+  const { data } = await api.get('/exams', {
+    params: {
+      student_id: user?.id,
+    },
+  })
+
   return data
 }
 
 export const getExamById = async (id: any) => {
-  const { data } = await api.get(`/exams/${id}`)
+  const user = getCurrentUser()
+
+  const { data } = await api.get(`/exams/${id}`, {
+    params: {
+      student_id: user?.id,
+    },
+  })
+
   return data
 }
 

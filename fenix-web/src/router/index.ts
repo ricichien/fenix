@@ -4,7 +4,7 @@ import ProfessorLayout from '@/layouts/ProfessorLayout.vue'
 import ProfessorDashboard from '../pages/professor/Dashboard.vue'
 import ExamsList from '../pages/professor/ExamsList.vue'
 
-import StudentExams from '../pages/student/Exams.vue'
+import Exams from '../pages/student/Exams.vue'
 import ExamTake from '../pages/student/ExamTake.vue'
 import ChooseRole from '../pages/ChooseRole.vue'
 
@@ -46,7 +46,7 @@ const routes = [
     children: [
       {
         path: '',
-        component: StudentExams,
+        component: Exams,
       },
       {
         path: 'exam/:id',
