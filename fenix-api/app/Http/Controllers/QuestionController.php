@@ -16,8 +16,14 @@ class QuestionController extends Controller
 
     public function store(Request $request)
     {
-        $question = $this->questionService->create($request->all());
+        $validated = $request->validate([
+            'exam_id' => 'required|exists:exams,id',
+            'statement' => 'required|string',
+            'options' => 'required|array|min:2',
+            'options.*.text' => 'required|string',
+            'options.*.is_correct' => 'required|boolean',
+        ]);
 
-        return response()->json($question);
+        return $this->questionService->create($validated);
     }
 }

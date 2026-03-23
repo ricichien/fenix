@@ -39,7 +39,7 @@ class QuestionControllerTest extends TestCase
 
         $response = $this->postJson('/api/questions', $payload);
 
-        $response->assertStatus(200)
+        $response->assertStatus(201)
          ->assertJsonFragment([
              'statement' => 'Qual é a resposta?'
          ]);
