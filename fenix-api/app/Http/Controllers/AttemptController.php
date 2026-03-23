@@ -16,15 +16,14 @@ class AttemptController extends Controller
 
     public function submit(Request $request, $examId)
     {
-        try {
-            // 🔥 validação (isso pesa MUITO em teste)
-            $request->validate([
-                'student_id' => 'required|integer',
-                'answers' => 'required|array|min:1',
-                'answers.*.question_id' => 'required|integer',
-                'answers.*.selected_option_id' => 'required|integer',
-            ]);
+        $request->validate([
+            'student_id' => 'required|integer',
+            'answers' => 'required|array|min:1',
+            'answers.*.question_id' => 'required|integer',
+            'answers.*.selected_option_id' => 'required|integer',
+        ]);
 
+        try {
             $result = $this->attemptService->submit(
                 $examId,
                 $request->student_id,
@@ -41,5 +40,11 @@ class AttemptController extends Controller
                 'message' => $e->getMessage()
             ], 400);
         }
+    }
+    public function test_attempt_validation_fails()
+    {
+        $response = $this->postJson('/api/attempts/1/submit', []);
+
+        $response->assertStatus(422);
     }
 }
