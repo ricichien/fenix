@@ -102,4 +102,10 @@ class AttemptControllerTest extends TestCase
 
         $response->assertStatus(422);
     }
+    // public function test_attempt_validation_fails()
+    // {
+    //     $response = $this->postJson('/api/attempts/1/submit', []);
+
+    //     $response->assertStatus(422);
+    // }
 }

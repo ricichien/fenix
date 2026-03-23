@@ -3,11 +3,14 @@
 namespace App\Services;
 
 use App\Models\Attempt;
+use App\Models\Exam;
 
 class DashboardService
 {
     public function getExamStats($examId)
     {
+        // Exam::findOrFail($examId);
+
         $attempts = Attempt::where('exam_id', $examId)->get();
 
         $totalAttempts = $attempts->count();
