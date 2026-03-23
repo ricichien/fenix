@@ -6,11 +6,18 @@ use App\Services\DashboardService;
 
 class DashboardController extends Controller
 {
-    protected $dashboardService;
+    protected DashboardService $dashboardService;
 
     public function __construct(DashboardService $dashboardService)
     {
         $this->dashboardService = $dashboardService;
+    }
+
+    public function index()
+    {
+        $stats = $this->dashboardService->getGlobalStats();
+
+        return response()->json($stats);
     }
 
     public function examStats($examId)

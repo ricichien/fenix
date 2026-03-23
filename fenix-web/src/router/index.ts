@@ -6,14 +6,14 @@ import ExamsList from '../pages/professor/ExamsList.vue'
 
 import StudentExams from '../pages/student/Exams.vue'
 import ExamTake from '../pages/student/ExamTake.vue'
+import ChooseRole from '../pages/ChooseRole.vue'
 
 const routes = [
   {
     path: '/',
-    redirect: '/student',
+    component: ChooseRole,
   },
 
-  // PROFESSOR
   {
     path: '/professor',
     component: ProfessorLayout,
@@ -26,10 +26,21 @@ const routes = [
         path: 'exams',
         component: ExamsList,
       },
+      {
+        path: 'exams/new',
+        component: () => import('../pages/professor/ExamCreate.vue'),
+      },
+      {
+        path: 'exams/:id',
+        component: () => import('../pages/professor/ExamDetail.vue'),
+      },
+      {
+        path: 'exams/:id/edit',
+        component: () => import('../pages/professor/ExamEdit.vue'),
+      },
     ],
   },
 
-  // ALUNO
   {
     path: '/student',
     children: [

@@ -25,7 +25,7 @@ const loadExams = async () => {
 };
 
 const openExam = (id) => {
-    router.push(`/student/exams/${id}`);
+    router.push(`/student/exam/${id}`);
 };
 
 onMounted(() => {

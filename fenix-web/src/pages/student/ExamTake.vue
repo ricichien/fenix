@@ -1,32 +1,30 @@
-<script setup>
-import { ref, onMounted } from "vue";
-import { useRoute } from "vue-router";
-import { getExamById, submitExam } from "@/services/examService";
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { getExamById, submitExam } from '@/services/examService'
 
-const route = useRoute();
+const route = useRoute()
 
-const exam = ref(null);
-const answers = ref({});
-const result = ref(null);
-const loading = ref(false);
+const exam = ref < any > (null)
+const answers = ref < Record < string, any>> ({})
+const result = ref < any > (null)
+const loading = ref(false)
 
 const load = async () => {
-    exam.value = await getExamById(route.params.id);
-};
+    exam.value = await getExamById(route.params.id)
+}
 
 const submit = async () => {
-    loading.value = true;
+    loading.value = true
 
     try {
-        result.value = await submitExam(route.params.id, {
-            answers: answers.value,
-        });
+        result.value = await submitExam(route.params.id, answers.value)
     } finally {
-        loading.value = false;
+        loading.value = false
     }
-};
+}
 
-onMounted(load);
+onMounted(load)
 </script>
 
 <template>

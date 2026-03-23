@@ -1,19 +1,26 @@
 <?php
-// Exam
+
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ExamController;
+use App\Http\Controllers\QuestionController;
+use App\Http\Controllers\AttemptController;
+use App\Http\Controllers\DashboardController;
+
+// Exam
 Route::get('/exams', [ExamController::class, 'index']);
 Route::post('/exams', [ExamController::class, 'store']);
 Route::get('/exams/{id}', [ExamController::class, 'show']);
+Route::get('/exams/{id}/edit', [ExamController::class, 'showWithAnswers']);
+Route::put('/exams/{id}', [ExamController::class, 'update']);
+Route::delete('/exams/{id}', [ExamController::class, 'destroy']);
+Route::get('/debug', [ExamController::class, 'debug']);
 
 // Questions
-use App\Http\Controllers\QuestionController;
 Route::post('/questions', [QuestionController::class, 'store']);
 
 // Attempt
-use App\Http\Controllers\AttemptController;
 Route::post('/exams/{examId}/submit', [AttemptController::class, 'submit']);
 
 // Dashboard
-use App\Http\Controllers\DashboardController;
+Route::get('/dashboard', [DashboardController::class, 'index']);
 Route::get('/exams/{examId}/stats', [DashboardController::class, 'examStats']);
