@@ -1,0 +1,525 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Test API",
+        "version": "1.0.0"
+    },
+    "paths": {
+        "/exams/{examId}/submit": {
+            "post": {
+                "tags": [
+                    "Attempts"
+                ],
+                "summary": "Envia as respostas de uma prova",
+                "operationId": "eab86921fca54b859403903399f41766",
+                "parameters": [
+                    {
+                        "name": "examId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AttemptSubmitRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Tentativa processada com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Prova enviada com sucesso"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/AttemptResult"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Erro de regra de negócio ou exceção capturada no controller",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Você já realizou essa prova."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validação falhou"
+                    }
+                }
+            }
+        },
+        "/dashboard": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Retorna estatísticas globais",
+                "operationId": "a92dff3ea055c0a594f425e852840a68",
+                "responses": {
+                    "200": {
+                        "description": "Estatísticas globais das tentativas",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DashboardStats"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/exams/{examId}/stats": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Retorna estatísticas de um exame específico",
+                "operationId": "8318166064696cc822bd9b46664eb70d",
+                "parameters": [
+                    {
+                        "name": "examId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Estatísticas do exame",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DashboardStats"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Exame não encontrado"
+                    }
+                }
+            }
+        },
+        "/exams": {
+            "get": {
+                "tags": [
+                    "Exams"
+                ],
+                "summary": "Lista todos os exames",
+                "operationId": "9bced8e9ec3c9853c603f6aabc73119e",
+                "parameters": [
+                    {
+                        "name": "student_id",
+                        "in": "query",
+                        "description": "Se informado, marca has_attempt=true para exames já realizados por esse estudante",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista de exames",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/ExamListItem"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Exams"
+                ],
+                "summary": "Cria um novo exame com questões e alternativas",
+                "operationId": "a6ee4484fbf0c47001471e1d7c2a46d6",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ExamWriteRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Exame criado e retornado com questões e alternativas",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ExamWithAnswers"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Se houver validação automática ou payload inválido em algum ponto do fluxo",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "The given data was invalid."
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/exams/{id}": {
+            "get": {
+                "tags": [
+                    "Exams"
+                ],
+                "summary": "Exibe um exame sem revelar as alternativas corretas",
+                "operationId": "b9d23f8f8ee1fb2cf79989c13983d08e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "student_id",
+                        "in": "query",
+                        "description": "Se informado, retorna has_attempt e last_result com base na última tentativa do estudante",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Exame encontrado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ExamListItem"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Exame não encontrado"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Exams"
+                ],
+                "summary": "Atualiza um exame e recria suas questões/alternativas",
+                "operationId": "5c0aa4f89c9b65b77ca22509baf9eed0",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ExamWriteRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Exame atualizado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ExamWithAnswers"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Exame não encontrado"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Exams"
+                ],
+                "summary": "Remove um exame e seus filhos",
+                "operationId": "51264c41636ab73088ba87fcd2ea7966",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Exame removido",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GenericMessageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Exame não encontrado"
+                    }
+                }
+            }
+        },
+        "/exams/{id}/edit": {
+            "get": {
+                "tags": [
+                    "Exams"
+                ],
+                "summary": "Exibe o exame com as alternativas corretas visíveis",
+                "operationId": "f7dafc3af57d2e65637c344d610babc3",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Exame com `is_correct` em cada alternativa",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ExamWithAnswers"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Exame não encontrado"
+                    }
+                }
+            }
+        },
+        "/debug": {
+            "get": {
+                "tags": [
+                    "Exams"
+                ],
+                "summary": "Retorna todas as questões e opções em modo debug",
+                "operationId": "21cc223ce8d0da30f9c7233e565511e3",
+                "responses": {
+                    "200": {
+                        "description": "Dados brutos de questões e opções",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "questions": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        },
+                                        "options": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/questions": {
+            "post": {
+                "tags": [
+                    "Questions"
+                ],
+                "summary": "Cria uma questão com alternativas",
+                "operationId": "5204b979e45afe309ad0805a4538a765",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QuestionCreateRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Questão criada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/QuestionWithAnswers"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validação falhou"
+                    }
+                }
+            }
+        },
+        "/test": {
+            "get": {
+                "tags": [
+                    "Test"
+                ],
+                "operationId": "40f1e85a88db95d8b55d239c657945b6",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ExamListItem": {
+                "required": [
+                    "id",
+                    "title",
+                    "created_by",
+                    "questions",
+                    "has_attempt"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "title": {
+                        "type": "string",
+                        "example": "Exame de Matemática"
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "Prova de introdução",
+                        "nullable": true
+                    },
+                    "created_by": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "questions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/QuestionPublic"
+                        }
+                    },
+                    "has_attempt": {
+                        "type": "boolean",
+                        "example": false
+                    }
+                },
+                "type": "object"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Attempts",
+            "description": "Attempts"
+        },
+        {
+            "name": "Dashboard",
+            "description": "Dashboard"
+        },
+        {
+            "name": "Exams",
+            "description": "Exams"
+        },
+        {
+            "name": "Questions",
+            "description": "Questions"
+        },
+        {
+            "name": "Test",
+            "description": "Test"
+        }
+    ]
+}

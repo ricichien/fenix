@@ -1,0 +1,733 @@
+openapi: 3.0.3
+info:
+  title: Fenix API
+  version: 1.0.0
+  description: >
+    Documentação da API de exames, questões, tentativas e estatísticas.
+    Esta API está preparada para autenticação via JWT (Bearer Token).
+
+servers:
+  - url: http://localhost:8000/api
+    description: Servidor de Desenvolvimento Local
+
+tags:
+  - name: Exams
+    description: Gerenciamento de provas e listagens
+  - name: Questions
+    description: Criação e manutenção de questões isoladas
+  - name: Attempts
+    description: Processamento de respostas e correção automática
+  - name: Dashboard
+    description: Análise de performance e indicadores de sucesso
+
+security:
+  - bearerAuth: []
+
+paths:
+  /questions:
+    post:
+      tags:
+        - Questions
+      summary: Cria uma questão com alternativas
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuestionCreateRequest"
+      responses:
+        "200":
+          description: Questão criada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestionWithAnswers"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /exams:
+    get:
+      tags:
+        - Exams
+      summary: Lista todos os exames
+      parameters:
+        - name: student_id
+          in: query
+          required: false
+          description: Se informado, marca has_attempt=true para exames já realizados por esse estudante
+          schema:
+            type: integer
+            example: 1
+      responses:
+        "200":
+          description: Lista de exames
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExamListItem"
+    post:
+      tags:
+        - Exams
+      summary: Cria um novo exame com questões e alternativas
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExamWriteRequest"
+      responses:
+        "200":
+          description: Exame criado e retornado com questões e alternativas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExamWithAnswers"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /exams/{id}:
+    get:
+      tags:
+        - Exams
+      summary: Exibe um exame sem revelar as alternativas corretas
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+        - name: student_id
+          in: query
+          required: false
+          description: Se informado, retorna has_attempt e last_result com base na última tentativa do estudante
+          schema:
+            type: integer
+            example: 1
+      responses:
+        "200":
+          description: Exame encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExamPublic"
+        "404":
+          description: Exame não encontrado
+    put:
+      tags:
+        - Exams
+      summary: Atualiza um exame e recria suas questões/alternativas
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExamWriteRequest"
+      responses:
+        "200":
+          description: Exame atualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExamWithAnswers"
+        "404":
+          description: Exame não encontrado
+        "422":
+          $ref: "#/components/responses/ValidationError"
+    delete:
+      tags:
+        - Exams
+      summary: Remove um exame e seus filhos
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        "200":
+          description: Exame removido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericMessageResponse"
+        "404":
+          description: Exame não encontrado
+
+  /exams/{id}/edit:
+    get:
+      tags:
+        - Exams
+      summary: Exibe o exame com as alternativas corretas visíveis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        "200":
+          description: Exame com is_correct em cada alternativa
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExamWithAnswers"
+        "404":
+          description: Exame não encontrado
+
+  /exams/{examId}/submit:
+    post:
+      tags:
+        - Attempts
+      summary: Envia as respostas de uma prova
+      parameters:
+        - name: examId
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttemptSubmitRequest"
+      responses:
+        "200":
+          description: Tentativa processada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - message
+                  - data
+                properties:
+                  message:
+                    type: string
+                    example: Prova enviada com sucesso
+                  data:
+                    $ref: "#/components/schemas/AttemptResult"
+        "400":
+          description: Erro de regra de negócio ou exceção capturada no controller
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Você já realizou essa prova.
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /dashboard:
+    get:
+      tags:
+        - Dashboard
+      summary: Retorna estatísticas globais
+      responses:
+        "200":
+          description: Estatísticas globais das tentativas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /exams/{examId}/stats:
+    get:
+      tags:
+        - Dashboard
+      summary: Retorna estatísticas de um exame específico
+      parameters:
+        - name: examId
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        "200":
+          description: Estatísticas do exame
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+        "404":
+          description: Exame não encontrado
+
+  /debug:
+    get:
+      tags:
+        - Exams
+      summary: Retorna todas as questões e opções em modo debug
+      responses:
+        "200":
+          description: Dados brutos de questões e opções
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  questions:
+                    type: array
+                    items:
+                      type: object
+                  options:
+                    type: array
+                    items:
+                      type: object
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    ValidationError:
+      description: Erro de validação nos campos enviados
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ValidationError"
+
+  schemas:
+    ValidationError:
+      type: object
+      required:
+        - message
+        - errors
+      properties:
+        message:
+          type: string
+          example: The given data was invalid.
+        errors:
+          type: object
+          description: Lista de erros por campo
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            student_id:
+              - O campo student id é obrigatório.
+            answers:
+              - É necessário enviar ao menos uma resposta.
+
+    OptionPublic:
+      type: object
+      required:
+        - id
+        - question_id
+        - text
+      properties:
+        id:
+          type: integer
+          example: 1
+        question_id:
+          type: integer
+          example: 10
+        text:
+          type: string
+          example: Alternativa A
+
+    OptionWithCorrect:
+      type: object
+      required:
+        - id
+        - question_id
+        - text
+        - is_correct
+      properties:
+        id:
+          type: integer
+          example: 1
+        question_id:
+          type: integer
+          example: 10
+        text:
+          type: string
+          example: Alternativa A
+        is_correct:
+          type: boolean
+          example: true
+
+    QuestionPublic:
+      type: object
+      required:
+        - id
+        - exam_id
+        - statement
+        - options
+      properties:
+        id:
+          type: integer
+          example: 10
+        exam_id:
+          type: integer
+          example: 1
+        statement:
+          type: string
+          example: Quanto é 2 + 2?
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/OptionPublic"
+
+    QuestionWithAnswers:
+      type: object
+      required:
+        - id
+        - exam_id
+        - statement
+        - options
+      properties:
+        id:
+          type: integer
+          example: 10
+        exam_id:
+          type: integer
+          example: 1
+        statement:
+          type: string
+          example: Quanto é 2 + 2?
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/OptionWithCorrect"
+
+    QuestionCreateRequest:
+      type: object
+      required:
+        - exam_id
+        - statement
+        - options
+      properties:
+        exam_id:
+          type: integer
+          description: ID do exame pai
+          example: 1
+        statement:
+          type: string
+          description: O enunciado da questão
+          example: Quanto é 2 + 2?
+        options:
+          type: array
+          minItems: 2
+          items:
+            type: object
+            required:
+              - text
+              - is_correct
+            properties:
+              text:
+                type: string
+                example: 4
+              is_correct:
+                type: boolean
+                example: true
+      example:
+        exam_id: 1
+        statement: Qual a capital do Brasil?
+        options:
+          - text: Rio de Janeiro
+            is_correct: false
+          - text: Brasília
+            is_correct: true
+
+    ExamWriteRequest:
+      type: object
+      required:
+        - title
+        - questions
+      properties:
+        title:
+          type: string
+          example: Exame de Matemática
+        description:
+          type: string
+          nullable: true
+          example: Prova com questões básicas
+        questions:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+              - statement
+              - options
+            properties:
+              statement:
+                type: string
+                example: Quanto é 2 + 2?
+              options:
+                type: array
+                minItems: 2
+                items:
+                  type: object
+                  required:
+                    - text
+                    - is_correct
+                  properties:
+                    text:
+                      type: string
+                      example: 4
+                    is_correct:
+                      type: boolean
+                      example: true
+      example:
+        title: Exame de Matemática
+        description: Prova com questões básicas
+        questions:
+          - statement: Quanto é 2 + 2?
+            options:
+              - text: 4
+                is_correct: true
+              - text: 5
+                is_correct: false
+
+    ExamPublic:
+      type: object
+      required:
+        - id
+        - title
+        - created_by
+        - questions
+        - has_attempt
+        - last_result
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: Exame de Matemática
+        description:
+          type: string
+          nullable: true
+          example: Prova com questões básicas
+        created_by:
+          type: integer
+          example: 1
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestionPublic"
+        has_attempt:
+          type: boolean
+          example: false
+        last_result:
+          nullable: true
+          oneOf:
+            - $ref: "#/components/schemas/AttemptResult"
+            - type: "null"
+
+    ExamWithAnswers:
+      type: object
+      required:
+        - id
+        - title
+        - created_by
+        - questions
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: Exame de Matemática
+        description:
+          type: string
+          nullable: true
+          example: Prova com questões básicas
+        created_by:
+          type: integer
+          example: 1
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestionWithAnswers"
+
+    ExamListItem:
+      type: object
+      required:
+        - id
+        - title
+        - created_by
+        - questions
+        - has_attempt
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: Exame de Matemática
+        description:
+          type: string
+          nullable: true
+          example: Prova com questões básicas
+        created_by:
+          type: integer
+          example: 1
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestionPublic"
+        has_attempt:
+          type: boolean
+          example: false
+
+    AttemptAnswerInput:
+      type: object
+      required:
+        - question_id
+        - selected_option_id
+      properties:
+        question_id:
+          type: integer
+          example: 10
+        selected_option_id:
+          type: integer
+          example: 1
+
+    AttemptSubmitRequest:
+      type: object
+      required:
+        - student_id
+        - answers
+      properties:
+        student_id:
+          type: integer
+          example: 123
+        answers:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/AttemptAnswerInput"
+      example:
+        student_id: 123
+        answers:
+          - question_id: 10
+            selected_option_id: 1
+          - question_id: 11
+            selected_option_id: 4
+
+    AttemptDetail:
+      type: object
+      required:
+        - question_id
+        - is_correct
+      properties:
+        question_id:
+          type: integer
+          example: 10
+        question_statement:
+          type: string
+          example: Quanto é 2 + 2?
+        selected_option_id:
+          type: integer
+          nullable: true
+          example: 1
+        selected_text:
+          type: string
+          nullable: true
+          example: 4
+        correct_option_id:
+          type: integer
+          nullable: true
+          example: 1
+        correct_text:
+          type: string
+          nullable: true
+          example: 4
+        is_correct:
+          type: boolean
+          example: true
+
+    AttemptResult:
+      type: object
+      required:
+        - attempt_id
+        - exam_id
+        - student_id
+        - score
+        - percentage
+        - total_questions
+        - correct_count
+        - wrong_count
+        - details
+      properties:
+        attempt_id:
+          type: integer
+          example: 50
+        exam_id:
+          type: integer
+          example: 1
+        student_id:
+          type: integer
+          example: 123
+        score:
+          type: integer
+          description: Quantidade de respostas corretas
+          example: 8
+        percentage:
+          type: integer
+          description: Nota percentual de 0 a 100
+          example: 80
+        total_questions:
+          type: integer
+          example: 10
+        correct_count:
+          type: integer
+          example: 8
+        wrong_count:
+          type: integer
+          example: 2
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/AttemptDetail"
+
+    GenericMessageResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          example: Operação realizada com sucesso
+
+    DashboardStats:
+      type: object
+      required:
+        - total_exams
+        - total_attempts
+      properties:
+        total_exams:
+          type: integer
+          description: Total de exames cadastrados na plataforma
+          example: 10
+        total_attempts:
+          type: integer
+          description: Total de tentativas realizadas por todos os alunos
+          example: 150
+        average_score:
+          type: number
+          format: float
+          description: Média geral de acertos
+          example: 7.5

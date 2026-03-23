@@ -5,6 +5,7 @@ use App\Http\Controllers\ExamController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\AttemptController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\SwaggerTestController;
 
 // Exam
 Route::get('/exams', [ExamController::class, 'index']);
