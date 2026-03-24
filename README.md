@@ -2,6 +2,10 @@
 <img width="1253" height="1290" alt="Captura de tela 2026-03-24 135313" src="https://github.com/user-attachments/assets/0b5f886e-75d8-4fdb-acf5-1eb75ebe4449" />
 <img width="2559" height="445" alt="image" src="https://github.com/user-attachments/assets/6eca09a9-d710-4e72-a754-70c7455345cd" />
 
+[youtube.com/watch?v=fK-Tf7V3850&](https://www.youtube.com/watch?v=fK-Tf7V3850)
+
+Um video apresendo o funcionamento do projeto
+
 # Como rodar o projeto Fenix localmente
 
 Este documento explica como subir o projeto em ambiente local com Docker, Laravel, PostgreSQL, Redis e Vue.
