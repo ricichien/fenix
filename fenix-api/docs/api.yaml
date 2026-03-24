@@ -299,6 +299,35 @@ paths:
               schema:
                 $ref: "#/components/schemas/GlobalDashboardStats"
 
+  /dashboard/student:
+  get:
+    tags:
+      - Dashboard
+    summary: Estatísticas do dashboard do aluno
+    description: Retorna média do aluno e quantidade de provas pendentes
+    parameters:
+      - name: student_id
+        in: query
+        required: true
+        schema:
+          type: integer
+        example: 1
+    responses:
+      "200":
+        description: Dados do dashboard do aluno
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                average_score:
+                  type: number
+                  format: float
+                  example: 8.5
+                pending_exams:
+                  type: integer
+                  example: 2
+
   /exams/{examId}/stats:
     get:
       tags:
