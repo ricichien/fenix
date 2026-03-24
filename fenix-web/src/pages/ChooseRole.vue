@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { setCurrentUser } from '@/stores/user'
+import Navbar from '@/components/navbar/Navbar.vue'
 
 const router = useRouter()
 
@@ -16,6 +17,7 @@ const enterAsStudent = () => {
 </script>
 
 <template>
+    <Navbar />
     <div class="bento-layout">
         <main class="bento-grid">
 
@@ -103,6 +105,17 @@ const enterAsStudent = () => {
     padding: 24px;
 }
 
+/* .bento-layout {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background:
+        linear-gradient(rgba(234, 88, 12, 0.85), rgba(234, 88, 12, 0.85)),
+        url('/images/bg.jpg') center/cover no-repeat;
+} */
+
 .bento-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -114,7 +127,7 @@ const enterAsStudent = () => {
 
 .bento-card {
     background: #ffffff;
-    border-radius: 32px;
+    border-radius: 10px;
     padding: 32px;
     position: relative;
     overflow: hidden;
@@ -125,7 +138,9 @@ const enterAsStudent = () => {
 .hero-card {
     grid-column: span 2;
     grid-row: span 2;
-    background: #ea580c;
+    /* O gradiente vem antes da URL para ficar por cima */
+    background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),
+        url('@/images/bg.jpg') center/cover no-repeat;
     color: white;
     justify-content: center;
     border: none;
