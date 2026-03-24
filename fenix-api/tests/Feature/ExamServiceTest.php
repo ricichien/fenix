@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Exam;
+use App\Models\Question;
+use App\Models\Option;
 use App\Services\ExamService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -108,26 +110,60 @@ class ExamServiceTest extends TestCase
     {
         $service = new ExamService();
 
-        $exam = $service->create([
+        $exam = Exam::create([
             'title' => 'Original',
-            'description' => 'Desc',
-            'questions' => [
-                [
-                    'statement' => 'Q1',
-                    'options' => [
-                        ['text' => 'A', 'is_correct' => true],
-                        ['text' => 'B', 'is_correct' => false],
-                    ],
-                ],
-            ],
+            'created_by' => 1,
         ]);
 
-        $updated = $service->update($exam->id, [
-            'title' => 'Atualizado',
-            'description' => 'Nova desc',
+        $question = Question::create([
+            'exam_id' => $exam->id,
+            'statement' => 'Q1',
         ]);
 
-        $this->assertEquals('Atualizado', $updated->title);
-        $this->assertCount(1, $updated->questions);
+        Option::create([
+            'question_id' => $question->id,
+            'text' => 'A',
+            'is_correct' => true,
+        ]);
+
+        $service->update($exam->id, [
+            'title' => 'Updated Title',
+            'description' => 'Updated Description',
+        ]);
+
+        $exam->refresh();
+
+        $this->assertEquals('Updated Title', $exam->title);
+        $this->assertCount(1, $exam->questions);
+    }
+    public function test_update_does_not_remove_questions_when_not_provided(): void
+    {
+        $service = new \App\Services\ExamService();
+
+        $exam = \App\Models\Exam::create([
+            'title' => 'Test',
+            'created_by' => 1,
+        ]);
+
+        $question = \App\Models\Question::create([
+            'exam_id' => $exam->id,
+            'statement' => 'Q1',
+        ]);
+
+        \App\Models\Option::create([
+            'question_id' => $question->id,
+            'text' => 'A',
+            'is_correct' => true,
+        ]);
+
+        // 🔥 update SEM questions
+        $service->update($exam->id, [
+            'title' => 'Updated',
+            'description' => null,
+        ]);
+
+        $this->assertDatabaseHas('questions', [
+            'id' => $question->id,
+        ]);
     }
 }

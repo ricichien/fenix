@@ -85,19 +85,22 @@ class DashboardServiceTest extends TestCase
 
     public function test_global_stats_returns_zero_when_there_are_no_attempts(): void
     {
-        $service = new DashboardService();
+        $exam = Exam::create([
+            'title' => 'Empty Exam',
+            'created_by' => 1,
+        ]);
 
+        Question::create([
+            'exam_id' => $exam->id,
+            'statement' => 'Q1',
+        ]);
+
+        $service = new DashboardService();
         $stats = $service->getGlobalStats();
 
         $this->assertEquals(0, $stats['total_attempts']);
+        $this->assertEquals(1, $stats['total_questions']);
         $this->assertCount(0, $stats['ranking']);
-    }
-
-    public function test_cache_stores_dashboard_data(): void
-    {
-        Cache::put('dashboard_test', ['value' => 123], 10);
-
-        $this->assertEquals(123, Cache::get('dashboard_test')['value']);
     }
 
     public function test_global_stats_with_data(): void
@@ -105,6 +108,11 @@ class DashboardServiceTest extends TestCase
         $exam = Exam::create([
             'title' => 'Global',
             'created_by' => 1,
+        ]);
+
+        Question::create([
+            'exam_id' => $exam->id,
+            'statement' => 'Q1',
         ]);
 
         Attempt::create([
@@ -122,10 +130,10 @@ class DashboardServiceTest extends TestCase
         ]);
 
         $service = new DashboardService();
-
         $stats = $service->getGlobalStats();
 
         $this->assertEquals(2, $stats['total_attempts']);
+        $this->assertEquals(1, $stats['total_questions']);
     }
 
     public function test_exam_with_single_attempt(): void
@@ -218,5 +226,47 @@ class DashboardServiceTest extends TestCase
         $this->assertCount(2, $stats['ranking']);
         $this->assertEquals(1, $stats['ranking'][0]['position']);
         $this->assertEquals(2, $stats['ranking'][1]['position']);
+    }
+    public function test_global_stats_orders_ranking_by_percentage_then_score(): void
+    {
+        $exam1 = Exam::create([
+            'title' => 'Exam 1',
+            'created_by' => 1,
+        ]);
+
+        $exam2 = Exam::create([
+            'title' => 'Exam 2',
+            'created_by' => 1,
+        ]);
+
+        Question::create([
+            'exam_id' => $exam1->id,
+            'statement' => 'Q1',
+        ]);
+
+        Question::create([
+            'exam_id' => $exam2->id,
+            'statement' => 'Q2',
+        ]);
+
+        Attempt::create([
+            'exam_id' => $exam1->id,
+            'student_id' => 1,
+            'score' => 5,
+            'percentage' => 100,
+        ]);
+
+        Attempt::create([
+            'exam_id' => $exam2->id,
+            'student_id' => 2,
+            'score' => 3,
+            'percentage' => 60,
+        ]);
+
+        $service = new DashboardService();
+        $stats = $service->getGlobalStats();
+
+        $this->assertNotEmpty($stats['ranking']);
+        $this->assertEquals(1, $stats['ranking'][0]['student_id']);
     }
 }

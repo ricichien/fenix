@@ -46,59 +46,15 @@ class DashboardService
         ];
     }
     
-    // public function getGlobalStats($page = 1, $limit = 10)
-    // {
-    //     $allAttempts = Attempt::all();
-
-    //     if ($allAttempts->isEmpty()) {
-    //         return [
-    //             'total_attempts' => 0,
-    //             'average_score' => 0,
-    //             'average_percentage' => 0,
-    //             'highest_score' => 0,
-    //             'lowest_score' => 0,
-    //             'ranking' => [],
-    //         ];
-    //     }
-
-    //     $ranking = $allAttempts
-    //         ->groupBy('student_id')
-    //         ->map(function ($studentAttempts) {
-    //             return [
-    //                 'student_id' => $studentAttempts->first()->student_id,
-    //                 'score' => round($studentAttempts->avg('score'), 2),
-    //                 'percentage' => round($studentAttempts->avg('percentage'), 2),
-    //                 'attempts_count' => $studentAttempts->count(),
-    //             ];
-    //         })
-    //         ->sort(function ($a, $b) {
-    //             return $b['score'] <=> $a['score']
-    //                 ?: $b['percentage'] <=> $a['percentage']
-    //                 ?: $b['attempts_count'] <=> $a['attempts_count']
-    //                 ?: $a['student_id'] <=> $b['student_id'];
-    //         })
-    //         ->values()
-    //         ->map(function ($item, $index) {
-    //             $item['position'] = $index + 1;
-    //             return $item;
-    //         });
-
-    //     return [
-    //         'total_attempts' => $allAttempts->count(),
-    //         'average_score' => round($allAttempts->avg('score'), 2),
-    //         'average_percentage' => round($allAttempts->avg('percentage'), 2),
-    //         'highest_score' => $allAttempts->max('score'),
-    //         'lowest_score' => $allAttempts->min('score'),
-    //         'ranking' => $ranking->forPage($page, $limit)->values(),
-    //     ];
-    // }
     public function getGlobalStats($page = 1, $limit = 10)
     {
-        $allAttempts = Attempt::all();
+        $exams = Exam::withCount('questions')->get();
+        $totalQuestionsSystem = $exams->sum('questions_count');
 
-        if ($allAttempts->isEmpty()) {
+        if ($totalQuestionsSystem <= 0) {
             return [
                 'total_attempts' => 0,
+                'total_questions' => 0,
                 'average_score' => 0,
                 'average_percentage' => 0,
                 'highest_score' => 0,
@@ -107,25 +63,27 @@ class DashboardService
             ];
         }
 
-        $ranking = $allAttempts
+        $attempts = Attempt::orderBy('created_at')->get();
+
+        $ranking = $attempts
             ->groupBy('student_id')
-            ->map(function ($studentAttempts) {
+            ->map(function ($studentAttempts) use ($exams, $totalQuestionsSystem) {
+                $attemptsByExam = $studentAttempts->groupBy('exam_id');
 
-                dd($studentAttempts->map(fn($a) => [
-                    'score' => $a->score,
-                    'total_questions' => $a->total_questions
-                ]));
+                $totalCorrect = 0;
 
-                $totalCorrect = $studentAttempts->sum('score');
-                $totalQuestions = $studentAttempts->sum('total_questions');
+                foreach ($exams as $exam) {
+                    $attemptForExam = $attemptsByExam->get($exam->id)?->last();
+                    $totalCorrect += $attemptForExam?->score ?? 0;
+                }
 
-                $percentage = $totalQuestions > 0
-                    ? round(($totalCorrect / $totalQuestions) * 100, 2)
+                $percentage = $totalQuestionsSystem > 0
+                    ? round(($totalCorrect / $totalQuestionsSystem) * 100, 2)
                     : 0;
 
                 return [
                     'student_id' => $studentAttempts->first()->student_id,
-                    'score' => $totalCorrect, // TOTAL, não média
+                    'score' => $totalCorrect,
                     'percentage' => $percentage,
                     'attempts_count' => $studentAttempts->count(),
                 ];
@@ -143,15 +101,12 @@ class DashboardService
             });
 
         return [
-            'total_attempts' => $allAttempts->count(),
-
-            // média global continua média normal
-            'average_score' => round($allAttempts->avg('score'), 2),
-            'average_percentage' => round($allAttempts->avg('percentage'), 2),
-
-            'highest_score' => $allAttempts->max('score'),
-            'lowest_score' => $allAttempts->min('score'),
-
+            'total_attempts' => $attempts->count(),
+            'total_questions' => $totalQuestionsSystem,
+            'average_score' => round($attempts->avg('score'), 2),
+            'average_percentage' => round($ranking->avg('percentage'), 2),
+            'highest_score' => $attempts->max('score'),
+            'lowest_score' => $attempts->min('score'),
             'ranking' => $ranking->forPage($page, $limit)->values(),
         ];
     }
