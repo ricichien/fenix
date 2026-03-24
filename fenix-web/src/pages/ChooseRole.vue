@@ -11,7 +11,7 @@ const enterAsProfessor = () => {
 }
 
 const enterAsStudent = () => {
-    setCurrentUser({ id: 2, role: 'student' })
+    setCurrentUser({ id: 1, role: 'student' })
     router.push('/student')
 }
 </script>
@@ -105,17 +105,6 @@ const enterAsStudent = () => {
     padding: 24px;
 }
 
-/* .bento-layout {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    background:
-        linear-gradient(rgba(234, 88, 12, 0.85), rgba(234, 88, 12, 0.85)),
-        url('/images/bg.jpg') center/cover no-repeat;
-} */
-
 .bento-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -133,12 +122,12 @@ const enterAsStudent = () => {
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .hero-card {
     grid-column: span 2;
     grid-row: span 2;
-    /* O gradiente vem antes da URL para ficar por cima */
     background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),
         url('@/images/bg.jpg') center/cover no-repeat;
     color: white;
@@ -228,7 +217,7 @@ const enterAsStudent = () => {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f8fafc;
+    background: #f8f8f8;
     color: #0f172a;
     transition: all 0.3s ease;
 }

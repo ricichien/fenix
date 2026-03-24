@@ -7,6 +7,7 @@ import ExamsList from '../pages/professor/ExamsList.vue'
 import Exams from '../pages/student/Exams.vue'
 import ExamTake from '../pages/student/ExamTake.vue'
 import ChooseRole from '../pages/ChooseRole.vue'
+import StudentLayout from '@/layouts/StudentLayout.vue'
 
 const routes = [
   {
@@ -43,6 +44,7 @@ const routes = [
 
   {
     path: '/student',
+    // component: StudentLayout,
     children: [
       {
         path: '',

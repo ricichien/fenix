@@ -80,7 +80,6 @@ class AttemptControllerTest extends TestCase
         $examResponse = $this->getJson("/api/exams/{$exam['id']}");
         $questionId = $examResponse->json('questions.0.id');
 
-        // opção errada (provavelmente a segunda)
         $optionId = $examResponse->json('questions.0.options.1.id');
 
         $response = $this->postJson("/api/exams/{$exam['id']}/submit", [
@@ -102,10 +101,4 @@ class AttemptControllerTest extends TestCase
 
         $response->assertStatus(422);
     }
-    // public function test_attempt_validation_fails()
-    // {
-    //     $response = $this->postJson('/api/attempts/1/submit', []);
-
-    //     $response->assertStatus(422);
-    // }
 }

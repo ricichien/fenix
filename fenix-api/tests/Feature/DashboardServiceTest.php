@@ -31,7 +31,6 @@ class DashboardServiceTest extends TestCase
 
     public function test_exam_stats_returns_ranking_and_averages(): void
     {
-        // Given
         $exam = Exam::create([
             'title' => 'Test Exam',
             'created_by' => 1,
@@ -48,7 +47,6 @@ class DashboardServiceTest extends TestCase
             'is_correct' => true,
         ]);
 
-        // Criando attempts (ESSENCIAL para o teste)
         Attempt::create([
             'exam_id' => $exam->id,
             'student_id' => 1,
@@ -72,10 +70,8 @@ class DashboardServiceTest extends TestCase
 
         $service = new DashboardService();
 
-        // When
         $stats = $service->getExamStats($exam->id);
 
-        // Then
         $this->assertEquals(3, $stats['total_attempts']);
         $this->assertEquals(8, $stats['average_score']);
         $this->assertEquals(80, $stats['average_percentage']);

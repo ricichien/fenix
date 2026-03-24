@@ -79,7 +79,7 @@ import { RouterLink, RouterView } from "vue-router";
     </aside>
 
     <main class="main-content">
-        <header class="header-bar animate-in-top">
+        <!-- <header class="header-bar animate-in-top">
             <div class="header-left">
                 <nav class="breadcrumb-nav">
                     <span class="b-root">Administração</span>
@@ -103,7 +103,7 @@ import { RouterLink, RouterView } from "vue-router";
                 <div class="v-sep"></div>
                 <button class="exit-btn" @click="$router.push('/')">Sair</button>
             </div>
-        </header>
+        </header> -->
 
         <section class="page-view">
             <RouterView v-slot="{ Component }">

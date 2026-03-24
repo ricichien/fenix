@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { getExamById, submitExam } from '@/services/examService'
-import ExamResult from '@/components/exam/ExamResult.vue'
+import ExamResult from "@/components/student/exam/ExamResult.vue"
 
 type ExamOption = {
     id: number

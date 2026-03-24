@@ -16,31 +16,7 @@ class ExamController extends Controller
     {
         $this->examService = $examService;
     }
-    /**
-     * @OA\Post(
-     *     path="/exams",
-     *     tags={"Exams"},
-     *     summary="Cria um novo exame com questões e alternativas",
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(ref="#/components/schemas/ExamWriteRequest")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Exame criado e retornado com questões e alternativas",
-     *         @OA\JsonContent(ref="#/components/schemas/ExamWithAnswers")
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Se houver validação automática ou payload inválido em algum ponto do fluxo",
-     *         @OA\JsonContent(
-     *             type="object",
-     *             @OA\Property(property="message", type="string", example="The given data was invalid."),
-     *             @OA\Property(property="errors", type="object")
-     *         )
-     *     )
-     * )
-     */
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -57,33 +33,12 @@ class ExamController extends Controller
 
         return response()->json($exam, 200);
     }
-    /**
-     * @OA\Get(
-     *     path="/exams",
-     *     tags={"Exams"},
-     *     summary="Lista todos os exames",
-     *     @OA\Parameter(
-     *         name="student_id",
-     *         in="query",
-     *         required=false,
-     *         description="Se informado, marca has_attempt=true para exames já realizados por esse estudante",
-     *         @OA\Schema(type="integer", example=1)
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Lista de exames",
-     *         @OA\JsonContent(
-     *             type="array",
-     *             @OA\Items(ref="#/components/schemas/ExamListItem")
-     *         )
-     *     )
-     * )
-     */
+
     public function index()
     {
         $studentId = request()->query('student_id');
 
-        $exams = Exam::with('questions.options')->get();
+        $exams = Exam::with(['questions.options'])->withCount('attempts')->get();
 
         $attemptedExamIds = [];
         if ($studentId) {
@@ -98,6 +53,7 @@ class ExamController extends Controller
             });
 
             $data = $exam->toArray();
+            $data['has_attempts'] = $exam->attempts_count > 0;
             $data['has_attempt'] = in_array($exam->id, $attemptedExamIds);
 
             return $data;
@@ -105,35 +61,7 @@ class ExamController extends Controller
 
         return response()->json($payload);
     }
-    /**
-     * @OA\Get(
-     *     path="/exams/{id}",
-     *     tags={"Exams"},
-     *     summary="Exibe um exame sem revelar as alternativas corretas",
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         @OA\Schema(type="integer", example=1)
-     *     ),
-     *     @OA\Parameter(
-     *         name="student_id",
-     *         in="query",
-     *         required=false,
-     *         description="Se informado, retorna has_attempt e last_result com base na última tentativa do estudante",
-     *         @OA\Schema(type="integer", example=1)
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Exame encontrado",
-     *         @OA\JsonContent(ref="#/components/schemas/ExamListItem")
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Exame não encontrado"
-     *     )
-     * )
-     */
+
     public function show($id)
     {
         $studentId = request()->query('student_id');
@@ -163,58 +91,14 @@ class ExamController extends Controller
 
         return response()->json($data);
     }
-    /**
-     * @OA\Get(
-     *     path="/exams/{id}/edit",
-     *     tags={"Exams"},
-     *     summary="Exibe o exame com as alternativas corretas visíveis",
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         @OA\Schema(type="integer", example=1)
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Exame com `is_correct` em cada alternativa",
-     *         @OA\JsonContent(ref="#/components/schemas/ExamWithAnswers")
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Exame não encontrado"
-     *     )
-     * )
-     */
+
     public function showWithAnswers($id)
     {
         $exam = Exam::with('questions.options')->findOrFail($id);
 
         return response()->json($exam);
     }
-    /**
-     * @OA\Get(
-     *     path="/debug",
-     *     tags={"Exams"},
-     *     summary="Retorna todas as questões e opções em modo debug",
-     *     @OA\Response(
-     *         response=200,
-     *         description="Dados brutos de questões e opções",
-     *         @OA\JsonContent(
-     *             type="object",
-     *             @OA\Property(
-     *                 property="questions",
-     *                 type="array",
-     *                 @OA\Items(type="object")
-     *             ),
-     *             @OA\Property(
-     *                 property="options",
-     *                 type="array",
-     *                 @OA\Items(type="object")
-     *             )
-     *         )
-     *     )
-     * )
-     */
+
     public function debug()
     {
         return response()->json([
@@ -222,73 +106,20 @@ class ExamController extends Controller
             'options' => \App\Models\Option::all(),
         ]);
     }
-    /**
-     * @OA\Delete(
-     *     path="/exams/{id}",
-     *     tags={"Exams"},
-     *     summary="Remove um exame e seus filhos",
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         @OA\Schema(type="integer", example=1)
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Exame removido",
-     *         @OA\JsonContent(ref="#/components/schemas/GenericMessageResponse")
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Exame não encontrado"
-     *     )
-     * )
-     */
+
     public function destroy($id)
     {
-        $exam = Exam::with('questions.options')->findOrFail($id);
+        try {
+            $this->examService->delete($id);
 
-        foreach ($exam->questions as $question) {
-            $question->options()->delete();
+            return response()->json([
+                'message' => 'Exam deleted successfully'
+            ]);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 409);
         }
-
-        $exam->questions()->delete();
-        $exam->delete();
-
-        return response()->json([
-            'message' => 'Exam deleted successfully'
-        ]);
     }
-    /**
-     * @OA\Put(
-     *     path="/exams/{id}",
-     *     tags={"Exams"},
-     *     summary="Atualiza um exame e recria suas questões/alternativas",
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         @OA\Schema(type="integer", example=1)
-     *     ),
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(ref="#/components/schemas/ExamWriteRequest")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Exame atualizado",
-     *         @OA\JsonContent(ref="#/components/schemas/ExamWithAnswers")
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Exame não encontrado"
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Erro de validação"
-     *     )
-     * )
-     */
+
     public function update(Request $request, $id)
     {
         $validated = $request->validate([
@@ -301,9 +132,12 @@ class ExamController extends Controller
             'questions.*.options.*.is_correct' => 'required|boolean',
         ]);
 
-        $exam = $this->examService->update($id, $validated);
-
-        return response()->json($exam);
+        try {
+            $exam = $this->examService->update($id, $validated);
+            return response()->json($exam);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 409);
+        }
     }
 
     private function buildResultFromAttempt(Exam $exam, Attempt $attempt): array

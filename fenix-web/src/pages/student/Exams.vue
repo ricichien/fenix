@@ -1,51 +1,112 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { getExams } from '@/services/examService'
+import { getStudentStats } from '@/services/dashboardService'
 import { useRouter } from 'vue-router'
 
 type ExamListItem = {
     id: number
     title: string
+    description?: string
     has_attempt?: boolean
 }
 
 const exams = ref<ExamListItem[]>([])
 const router = useRouter()
 
+const stats = ref({
+    average_score: 0,
+    pending_exams: 0,
+    completed_exams: 0,
+    highest_score: 0,
+    lowest_score: 0,
+})
+
+const loading = ref(true)
+const filter = ref<'all' | 'pending' | 'done'>('all')
+
 const load = async () => {
-    exams.value = await getExams()
+    try {
+        exams.value = await getExams()
+        stats.value = await getStudentStats()
+    } finally {
+        loading.value = false
+    }
 }
 
 const openExam = (id: number) => {
     router.push(`/student/exam/${id}`)
 }
 
+const filteredExams = computed(() => {
+    if (filter.value === 'pending') {
+        return exams.value.filter(e => !e.has_attempt)
+    }
+    if (filter.value === 'done') {
+        return exams.value.filter(e => e.has_attempt)
+    }
+    return exams.value
+})
+
+const sortedExams = computed(() => {
+    return [...filteredExams.value].sort((a, b) => {
+        return Number(a.has_attempt) - Number(b.has_attempt)
+    })
+})
+
+const progress = computed(() => {
+    const total = exams.value.length
+    const done = exams.value.filter(e => e.has_attempt).length
+    return total ? Math.round((done / total) * 100) : 0
+})
+
 onMounted(load)
 </script>
 
 <template>
-    <div class="exam-dashboard">
+    <div v-if="loading" class="loading">
+        Carregando dashboard...
+    </div>
+
+    <div v-else class="exam-dashboard">
         <div class="welcome-banner">
             <div class="banner-text">
-                <h1>Olá, João! 👋</h1>
-                <p>Você tem <strong>2 provas</strong> pendentes para esta semana. Foco nos estudos!</p>
+                <h1>Olá, João!</h1>
+                <p>
+                    Você tem <strong>{{ stats.pending_exams }}</strong> provas pendentes.
+                </p>
+                <p>Progresso geral: <strong>{{ progress }}%</strong></p>
             </div>
-            <button class="view-schedule-btn">Ver Calendário</button>
+            <div class="insight-card">
+                <div class="score-circle">
+                    <span class="score-num">{{ stats.average_score }}</span>
+                    <span class="score-label">Média</span>
+                </div>
+
+            </div>
         </div>
 
         <div class="content-grid">
             <div class="main-col">
                 <div class="section-header">
-                    <h2>Avaliações Recentes</h2>
+                    <h2>Avaliações</h2>
+
                     <div class="filter-tabs">
-                        <button class="tab active">Todas</button>
-                        <button class="tab">Pendentes</button>
-                        <button class="tab">Finalizadas</button>
+                        <button class="tab" :class="{ active: filter === 'all' }" @click="filter = 'all'">
+                            Todas
+                        </button>
+                        <button class="tab" :class="{ active: filter === 'pending' }" @click="filter = 'pending'">
+                            Pendentes
+                        </button>
+                        <button class="tab" :class="{ active: filter === 'done' }" @click="filter = 'done'">
+                            Finalizadas
+                        </button>
                     </div>
                 </div>
 
                 <div class="exam-cards-list">
-                    <div v-for="exam in exams" :key="exam.id" class="horizontal-exam-card">
+                    <div v-for="exam in sortedExams" :key="exam.id" class="horizontal-exam-card">
+
                         <div class="subject-tag" :style="{ background: exam.has_attempt ? '#f0fdf4' : '#fff7ed' }">
                             <svg v-if="exam.has_attempt" viewBox="0 0 24 24" fill="none" stroke="#16a34a"
                                 stroke-width="2.5">
@@ -61,8 +122,6 @@ onMounted(load)
                             <h3>{{ exam.title }}</h3>
                             <div class="meta-row">
                                 <span>{{ exam.description }}</span>
-                                <span class="dot-separator">•</span>
-                                <span>Expira em: 24/05</span>
                             </div>
                         </div>
 
@@ -78,28 +137,6 @@ onMounted(load)
                     </div>
                 </div>
             </div>
-
-            <aside class="side-col">
-                <div class="insight-card">
-                    <h3>Meu Desempenho</h3>
-                    <div class="score-circle">
-                        <span class="score-num">8.5</span>
-                        <span class="score-label">Média Geral</span>
-                    </div>
-                    <p class="insight-text">Você está acima da média de 72% da turma. Continue assim!</p>
-                </div>
-
-                <div class="upcoming-classes">
-                    <h3>Próximas Aulas</h3>
-                    <div class="mini-class-card">
-                        <div class="class-time">08:00</div>
-                        <div class="class-info">
-                            <span class="class-title">Algoritmos Avançados</span>
-                            <span class="class-room">Laboratório 04</span>
-                        </div>
-                    </div>
-                </div>
-            </aside>
         </div>
     </div>
 </template>
@@ -143,12 +180,15 @@ onMounted(load)
 
 .view-schedule-btn:hover {
     background: rgba(255, 255, 255, 0.2);
+
 }
 
 .content-grid {
     display: grid;
-    grid-template-columns: 1fr 320px;
     gap: 32px;
+    padding-left: 20px;
+    padding-right: 20px;
+
 }
 
 .section-header {
@@ -274,12 +314,14 @@ onMounted(load)
 
 /* Insight Sidebar */
 .insight-card {
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 20px;
-    padding: 24px;
+    background: rgb(255, 255, 255);
+    border: 0px solid #ea580c;
+    border-radius: 50%;
+    /* padding: 24px; */
     text-align: center;
     margin-bottom: 24px;
+    width: 100px;
+    height: 100px;
 }
 
 .insight-card h3 {
@@ -290,7 +332,7 @@ onMounted(load)
 .score-circle {
     width: 100px;
     height: 100px;
-    border: 6px solid #f8fafc;
+    border: 6px solid #ffffff;
     border-top-color: #ea580c;
     border-radius: 50%;
     margin: 0 auto 16px;

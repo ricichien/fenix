@@ -25,3 +25,4 @@ Route::post('/exams/{examId}/submit', [AttemptController::class, 'submit']);
 // Dashboard
 Route::get('/dashboard', [DashboardController::class, 'index']);
 Route::get('/exams/{examId}/stats', [DashboardController::class, 'examStats']);
+Route::get('/dashboard/student', [DashboardController::class, 'studentStats']);

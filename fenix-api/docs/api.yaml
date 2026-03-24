@@ -4,7 +4,7 @@ info:
   version: 1.0.0
   description: >
     Documentação da API de exames, questões, tentativas e estatísticas.
-    Esta API está preparada para autenticação via JWT (Bearer Token).
+    A API usa autenticação JWT via Bearer Token.
 
 servers:
   - url: http://localhost:8000/api
@@ -12,13 +12,15 @@ servers:
 
 tags:
   - name: Exams
-    description: Gerenciamento de provas e listagens
+    description: Criação, leitura, atualização e remoção de provas
   - name: Questions
-    description: Criação e manutenção de questões isoladas
+    description: Criação de questões isoladas com alternativas
   - name: Attempts
-    description: Processamento de respostas e correção automática
+    description: Envio de respostas e correção automática
   - name: Dashboard
-    description: Análise de performance e indicadores de sucesso
+    description: Estatísticas globais e por prova
+  - name: Debug
+    description: Endpoints de apoio para inspeção interna
 
 security:
   - bearerAuth: []
@@ -28,7 +30,10 @@ paths:
     post:
       tags:
         - Questions
-      summary: Cria uma questão com alternativas
+      summary: Cria uma questão vinculada a uma prova existente
+      description: >
+        Cria a questão, cria as alternativas associadas e retorna a questão criada
+        já carregada com suas opções.
       requestBody:
         required: true
         content:
@@ -37,7 +42,7 @@ paths:
               $ref: "#/components/schemas/QuestionCreateRequest"
       responses:
         "200":
-          description: Questão criada
+          description: Questão criada com suas alternativas
           content:
             application/json:
               schema:
@@ -49,18 +54,22 @@ paths:
     get:
       tags:
         - Exams
-      summary: Lista todos os exames
+      summary: Lista todas as provas
+      description: >
+        Retorna todas as provas com suas questões e alternativas.
+        Se student_id for enviado, cada prova recebe o campo has_attempt indicando
+        se o estudante informado já realizou aquela prova.
       parameters:
         - name: student_id
           in: query
           required: false
-          description: Se informado, marca has_attempt=true para exames já realizados por esse estudante
+          description: ID do estudante para calcular has_attempt
           schema:
             type: integer
             example: 1
       responses:
         "200":
-          description: Lista de exames
+          description: Lista de provas
           content:
             application/json:
               schema:
@@ -70,7 +79,10 @@ paths:
     post:
       tags:
         - Exams
-      summary: Cria um novo exame com questões e alternativas
+      summary: Cria uma prova com questões e alternativas
+      description: >
+        Cria a prova e cria em lote suas questões e alternativas.
+        O campo created_by é preenchido pelo backend com o usuário atual/configurado.
       requestBody:
         required: true
         content:
@@ -79,7 +91,7 @@ paths:
               $ref: "#/components/schemas/ExamWriteRequest"
       responses:
         "200":
-          description: Exame criado e retornado com questões e alternativas
+          description: Prova criada com questões e alternativas
           content:
             application/json:
               schema:
@@ -91,7 +103,11 @@ paths:
     get:
       tags:
         - Exams
-      summary: Exibe um exame sem revelar as alternativas corretas
+      summary: Exibe uma prova sem revelar as alternativas corretas
+      description: >
+        Retorna a prova com questões e alternativas, ocultando o campo is_correct.
+        Se student_id for informado, adiciona has_attempt e last_result com base
+        na última tentativa desse estudante para a prova.
       parameters:
         - name: id
           in: path
@@ -102,23 +118,27 @@ paths:
         - name: student_id
           in: query
           required: false
-          description: Se informado, retorna has_attempt e last_result com base na última tentativa do estudante
+          description: ID do estudante para recuperar a última tentativa
           schema:
             type: integer
-            example: 1
+            example: 123
       responses:
         "200":
-          description: Exame encontrado
+          description: Prova encontrada
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExamPublic"
         "404":
-          description: Exame não encontrado
+          description: Prova não encontrada
     put:
       tags:
         - Exams
-      summary: Atualiza um exame e recria suas questões/alternativas
+      summary: Atualiza uma prova e recria suas questões e alternativas
+      description: >
+        Atualiza título e descrição da prova. Em seguida, remove as questões e alternativas
+        antigas e recria o conjunto enviado no request.
+        Regra de negócio: não permitir editar se a prova já tiver tentativas/respostas.
       parameters:
         - name: id
           in: path
@@ -134,19 +154,24 @@ paths:
               $ref: "#/components/schemas/ExamWriteRequest"
       responses:
         "200":
-          description: Exame atualizado
+          description: Prova atualizada
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExamWithAnswers"
         "404":
-          description: Exame não encontrado
+          description: Prova não encontrada
+        "409":
+          $ref: "#/components/responses/BusinessRuleError"
         "422":
           $ref: "#/components/responses/ValidationError"
     delete:
       tags:
         - Exams
-      summary: Remove um exame e seus filhos
+      summary: Remove uma prova e seus registros filhos
+      description: >
+        Remove as alternativas, as questões e a prova.
+        Regra de negócio: não permitir excluir se a prova já tiver tentativas/respostas.
       parameters:
         - name: id
           in: path
@@ -156,19 +181,22 @@ paths:
             example: 1
       responses:
         "200":
-          description: Exame removido
+          description: Prova removida
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/GenericMessageResponse"
         "404":
-          description: Exame não encontrado
+          description: Prova não encontrada
+        "409":
+          $ref: "#/components/responses/BusinessRuleError"
 
   /exams/{id}/edit:
     get:
       tags:
         - Exams
-      summary: Exibe o exame com as alternativas corretas visíveis
+      summary: Exibe a prova com as alternativas corretas visíveis
+      description: Endpoint usado para telas administrativas de edição/revisão da prova.
       parameters:
         - name: id
           in: path
@@ -178,19 +206,22 @@ paths:
             example: 1
       responses:
         "200":
-          description: Exame com is_correct em cada alternativa
+          description: Prova encontrada com is_correct em cada alternativa
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExamWithAnswers"
         "404":
-          description: Exame não encontrado
+          description: Prova não encontrada
 
   /exams/{examId}/submit:
     post:
       tags:
         - Attempts
       summary: Envia as respostas de uma prova
+      description: >
+        Registra uma tentativa única por aluno e prova, corrige automaticamente as respostas,
+        grava os registros de Answer e retorna o resumo da correção.
       parameters:
         - name: examId
           in: path
@@ -221,11 +252,13 @@ paths:
                   data:
                     $ref: "#/components/schemas/AttemptResult"
         "400":
-          description: Erro de regra de negócio ou exceção capturada no controller
+          description: Erro de regra de negócio ou exceção tratada no controller
           content:
             application/json:
               schema:
                 type: object
+                required:
+                  - message
                 properties:
                   message:
                     type: string
@@ -238,19 +271,42 @@ paths:
       tags:
         - Dashboard
       summary: Retorna estatísticas globais
+      description: >
+        Retorna o total de tentativas, média geral, maior/menor nota e o ranking de alunos.
+        Os parâmetros page e limit são usados para paginar o ranking retornado.
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+            example: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+            example: 10
       responses:
         "200":
-          description: Estatísticas globais das tentativas
+          description: Estatísticas globais
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DashboardStats"
+                $ref: "#/components/schemas/GlobalDashboardStats"
 
   /exams/{examId}/stats:
     get:
       tags:
         - Dashboard
-      summary: Retorna estatísticas de um exame específico
+      summary: Retorna estatísticas de uma prova específica
+      description: >
+        Valida se a prova existe e depois retorna estatísticas agregadas somente das tentativas
+        relacionadas a essa prova.
       parameters:
         - name: examId
           in: path
@@ -260,35 +316,27 @@ paths:
             example: 1
       responses:
         "200":
-          description: Estatísticas do exame
+          description: Estatísticas da prova
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DashboardStats"
+                $ref: "#/components/schemas/ExamStats"
         "404":
-          description: Exame não encontrado
+          description: Prova não encontrada
 
   /debug:
     get:
       tags:
-        - Exams
-      summary: Retorna todas as questões e opções em modo debug
+        - Debug
+      summary: Retorna questões e alternativas em modo debug
+      description: Endpoint de inspeção interna para verificar os registros brutos.
       responses:
         "200":
-          description: Dados brutos de questões e opções
+          description: Dados brutos de questões e alternativas
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  questions:
-                    type: array
-                    items:
-                      type: object
-                  options:
-                    type: array
-                    items:
-                      type: object
+                $ref: "#/components/schemas/DebugDump"
 
 components:
   securitySchemes:
@@ -304,6 +352,18 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ValidationError"
+    BusinessRuleError:
+      description: Violação de regra de negócio
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - message
+            properties:
+              message:
+                type: string
+                example: Não é possível editar ou excluir esta prova porque ela já possui respostas.
 
   schemas:
     ValidationError:
@@ -327,6 +387,15 @@ components:
               - O campo student id é obrigatório.
             answers:
               - É necessário enviar ao menos uma resposta.
+
+    GenericMessageResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          example: Operação realizada com sucesso
 
     OptionPublic:
       type: object
@@ -419,11 +488,11 @@ components:
       properties:
         exam_id:
           type: integer
-          description: ID do exame pai
+          description: ID da prova pai
           example: 1
         statement:
           type: string
-          description: O enunciado da questão
+          description: Enunciado da questão
           example: Quanto é 2 + 2?
         options:
           type: array
@@ -508,7 +577,6 @@ components:
         - created_by
         - questions
         - has_attempt
-        - last_result
       properties:
         id:
           type: integer
@@ -703,31 +771,134 @@ components:
           items:
             $ref: "#/components/schemas/AttemptDetail"
 
-    GenericMessageResponse:
+    DashboardRankingItem:
       type: object
       required:
-        - message
+        - position
+        - student_id
+        - score
+        - percentage
       properties:
-        message:
-          type: string
-          example: Operação realizada com sucesso
-
-    DashboardStats:
-      type: object
-      required:
-        - total_exams
-        - total_attempts
-      properties:
-        total_exams:
+        position:
           type: integer
-          description: Total de exames cadastrados na plataforma
-          example: 10
+          example: 1
+        student_id:
+          type: integer
+          example: 123
+        score:
+          type: number
+          format: float
+          example: 8.5
+        percentage:
+          type: number
+          format: float
+          example: 85
+        attempts_count:
+          type: integer
+          description: Quantidade de tentativas consideradas no ranking global
+          example: 3
+
+    GlobalDashboardStats:
+      type: object
+      required:
+        - total_attempts
+        - average_score
+        - average_percentage
+        - highest_score
+        - lowest_score
+        - ranking
+      properties:
         total_attempts:
           type: integer
-          description: Total de tentativas realizadas por todos os alunos
           example: 150
         average_score:
           type: number
           format: float
-          description: Média geral de acertos
           example: 7.5
+        average_percentage:
+          type: number
+          format: float
+          example: 75
+        highest_score:
+          type: number
+          format: float
+          example: 10
+        lowest_score:
+          type: number
+          format: float
+          example: 0
+        ranking:
+          type: array
+          items:
+            $ref: "#/components/schemas/DashboardRankingItem"
+
+    ExamStatsRankingItem:
+      type: object
+      required:
+        - position
+        - student_id
+        - score
+        - percentage
+      properties:
+        position:
+          type: integer
+          example: 1
+        student_id:
+          type: integer
+          example: 123
+        score:
+          type: number
+          format: float
+          example: 8
+        percentage:
+          type: number
+          format: float
+          example: 80
+
+    ExamStats:
+      type: object
+      required:
+        - total_attempts
+        - average_score
+        - average_percentage
+        - highest_score
+        - lowest_score
+        - ranking
+      properties:
+        total_attempts:
+          type: integer
+          example: 20
+        average_score:
+          type: number
+          format: float
+          example: 7.2
+        average_percentage:
+          type: number
+          format: float
+          example: 72
+        highest_score:
+          type: number
+          format: float
+          example: 10
+        lowest_score:
+          type: number
+          format: float
+          example: 0
+        ranking:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExamStatsRankingItem"
+
+    DebugDump:
+      type: object
+      properties:
+        questions:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        options:
+          type: array
+          items:
+            type: object
+            additionalProperties: true

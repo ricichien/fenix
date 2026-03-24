@@ -72,13 +72,14 @@ onMounted(loadExams);
                         Ver
                     </button>
 
-                    <button class="action-btn" type="button" @click="router.push(`/professor/exams/${exam.id}/edit`)">
+                    <button class="action-btn" type="button" :disabled="exam.has_attempts"
+                        @click="router.push(`/professor/exams/${exam.id}/edit`)">
                         Editar
                     </button>
 
-                    <button class="action-btn danger" type="button" :disabled="removingId === exam.id"
-                        @click="removeExam(exam.id)">
-                        {{ removingId === exam.id ? "Excluindo..." : "Excluir" }}
+                    <button class="action-btn danger" type="button"
+                        :disabled="exam.has_attempts || removingId === exam.id" @click="removeExam(exam.id)">
+                        Excluir
                     </button>
                 </div>
             </div>

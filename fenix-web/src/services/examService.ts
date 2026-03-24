@@ -55,3 +55,12 @@ export const deleteExam = async (id: number | string) => {
   const { data } = await api.delete(`/exams/${id}`)
   return data
 }
+
+/**
+ * Busca estatísticas de um exame específico
+ * @param examId ID do exame
+ */
+export const getExamStats = async (examId: number | string) => {
+  const { data } = await api.get(`/exams/${examId}/stats`)
+  return data
+}

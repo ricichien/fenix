@@ -14,26 +14,7 @@ class QuestionController extends Controller
     {
         $this->questionService = $questionService;
     }
-    /**
-     * @OA\Post(
-     *     path="/questions",
-     *     tags={"Questions"},
-     *     summary="Cria uma questão com alternativas",
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(ref="#/components/schemas/QuestionCreateRequest")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Questão criada",
-     *         @OA\JsonContent(ref="#/components/schemas/QuestionWithAnswers")
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Validação falhou"
-     *     )
-     * )
-     */
+
     public function store(Request $request)
     {
         $validated = $request->validate([
